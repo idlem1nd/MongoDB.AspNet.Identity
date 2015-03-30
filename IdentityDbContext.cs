@@ -26,9 +26,9 @@ namespace MongoDB.AspNet.Identity
         where TUserClaim : IdentityUserClaim<TKey>
     {
 
-        internal readonly MongoDatabase db;
+        internal readonly IMongoDatabase db;
 
-        public MongoDatabase Context { get { return db; } }
+        public IMongoDatabase Context { get { return db; } }
 
 
         /// <summary>
@@ -37,16 +37,9 @@ namespace MongoDB.AspNet.Identity
         /// <param name="connectionString">The connection string.</param>
         /// <returns>MongoDatabase.</returns>
         /// <exception cref="System.Exception">No database name specified in connection string</exception>
-        private MongoDatabase GetDatabaseFromSqlStyle(string connectionString)
+        private IMongoDatabase GetDatabaseFromSqlStyle(string connectionString)
         {
-            var conString = new MongoConnectionStringBuilder(connectionString);
-            MongoClientSettings settings = MongoClientSettings.FromConnectionStringBuilder(conString);
-            MongoServer server = new MongoClient(settings).GetServer();
-            if (conString.DatabaseName == null)
-            {
-                throw new Exception("No database name specified in connection string");
-            }
-            return server.GetDatabase(conString.DatabaseName);
+            throw new NotSupportedException("SQL Style connection strings are not supported. Please use a Mongo URL.");
         }
 
         /// <summary>
@@ -54,15 +47,15 @@ namespace MongoDB.AspNet.Identity
         /// </summary>
         /// <param name="url">The URL.</param>
         /// <returns>MongoDatabase.</returns>
-        private MongoDatabase GetDatabaseFromUrl(MongoUrl url)
+        private IMongoDatabase GetDatabaseFromUrl(MongoUrl url)
         {
             var client = new MongoClient(url);
-            MongoServer server = client.GetServer();
+            
             if (url.DatabaseName == null)
             {
                 throw new Exception("No database name specified in connection string");
             }
-            return server.GetDatabase(url.DatabaseName); // WriteConcern defaulted to Acknowledged
+            return client.GetDatabase(url.DatabaseName); // WriteConcern defaulted to Acknowledged
         }
 
         /// <summary>
@@ -71,11 +64,10 @@ namespace MongoDB.AspNet.Identity
         /// <param name="connectionString">The connection string.</param>
         /// <param name="dbName">Name of the database.</param>
         /// <returns>MongoDatabase.</returns>
-        private MongoDatabase GetDatabase(string connectionString, string dbName)
+        private IMongoDatabase GetDatabase(string connectionString, string dbName)
         {
             var client = new MongoClient(connectionString);
-            MongoServer server = client.GetServer();
-            return server.GetDatabase(dbName);
+            return client.GetDatabase(dbName);
         }
 
         public bool RequireUniqueEmail

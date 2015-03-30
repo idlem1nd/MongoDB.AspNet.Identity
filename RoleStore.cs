@@ -8,12 +8,9 @@ using System.Web;
 using Microsoft.AspNet.Identity;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using MongoDB.Driver.Builders;
 
 namespace MongoDB.AspNet.Identity
 {
-
-
     public class RoleStore<TRole> : RoleStore<TRole, string, IdentityUserRole>, IQueryableRoleStore<TRole>, IQueryableRoleStore<TRole, string>, IRoleStore<TRole, string>, IDisposable
     where TRole : IdentityRole, new()
     {
@@ -26,11 +23,11 @@ namespace MongoDB.AspNet.Identity
     {
         private bool _disposed;
         
-        private readonly MongoDatabase db;
+        private readonly IMongoDatabase db;
         private const string collectionName = "AspNetRoles";
 
 
-        public RoleStore(MongoDatabase context)
+        public RoleStore(IMongoDatabase context)
         {
             db = context;
         }
@@ -43,7 +40,7 @@ namespace MongoDB.AspNet.Identity
 
         public IQueryable<TRole> Roles
         {
-            get { return db.GetCollection<TRole>(collectionName).FindAll().AsQueryable(); }
+            get { return db.GetCollection<TRole>(collectionName).Find(t => true).ToListAsync().Result.AsQueryable(); }
         }
 
 
@@ -55,8 +52,7 @@ namespace MongoDB.AspNet.Identity
                 throw new ArgumentNullException("role");
             }
 
-            db.GetCollection<TRole>(collectionName).Insert(role);
-
+            await db.GetCollection<TRole>(collectionName).InsertOneAsync(role);
         }
 
         public virtual async Task DeleteAsync(TRole role)
@@ -67,7 +63,7 @@ namespace MongoDB.AspNet.Identity
                 throw new ArgumentNullException("role");
             }
 
-            db.GetCollection(collectionName).Remove((Query.EQ("_id", ObjectId.Parse(role.Id.ToString()))));
+            await db.GetCollection<TRole>(collectionName).DeleteOneAsync(x => x.Id.Equals(ObjectId.Parse(role.Id.ToString())));
         }
 
         public void Dispose()
@@ -81,18 +77,18 @@ namespace MongoDB.AspNet.Identity
             _disposed = true;
         }
 
-        public Task<TRole> FindByIdAsync(TKey roleId)
+        public async Task<TRole> FindByIdAsync(TKey roleId)
         {
             this.ThrowIfDisposed();
-            TRole role = db.GetCollection<TRole>(collectionName).FindOne((Query.EQ("_id", ObjectId.Parse(roleId.ToString()))));
-            return Task.FromResult(role);
+            var result = await db.GetCollection<TRole>(collectionName).Find(x => x.Id.Equals(ObjectId.Parse(roleId.ToString()))).ToListAsync();
+            return result.FirstOrDefault();
         }
 
-        public Task<TRole> FindByNameAsync(string roleName)
+        public async Task<TRole> FindByNameAsync(string roleName)
         {
             this.ThrowIfDisposed();
-            TRole role = db.GetCollection<TRole>(collectionName).FindOne((Query.EQ("Name", roleName)));
-            return Task.FromResult(role);
+            var result = await db.GetCollection<TRole>(collectionName).Find(x => x.Name == roleName).ToListAsync();
+            return result.FirstOrDefault();
         }
 
         private void ThrowIfDisposed()
@@ -111,9 +107,8 @@ namespace MongoDB.AspNet.Identity
                 throw new ArgumentNullException("role");
             }
 
-            db.GetCollection<TRole>(collectionName).Update(Query.EQ("_id", ObjectId.Parse(role.Id.ToString())), Update.Replace(role), UpdateFlags.Upsert);
-
-
+            var options = new UpdateOptions { IsUpsert = true };
+            await db.GetCollection<TRole>(collectionName).ReplaceOneAsync(x => x.Id.Equals(ObjectId.Parse(role.Id.ToString())), role, options);
         }
     }
 }
