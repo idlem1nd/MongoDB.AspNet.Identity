@@ -264,7 +264,7 @@ namespace MongoDB.AspNet.Identity
         {
             ThrowIfDisposed();
             var result = await db.GetCollection<TUser>(collectionName).Find(x => x.Id.Equals(ObjectId.Parse(userId))).ToListAsync();
-            return result.First();
+            return result.FirstOrDefault();
         }
 
         /// <summary>
@@ -276,7 +276,7 @@ namespace MongoDB.AspNet.Identity
         {
             ThrowIfDisposed();
             var result = await db.GetCollection<TUser>(collectionName).Find(x => x.UserName == userName).ToListAsync();
-            return result.First();
+            return result.FirstOrDefault();
         }
 
         /// <summary>
@@ -335,7 +335,7 @@ namespace MongoDB.AspNet.Identity
                 .Find(x => x.Logins.Any(l => l.LoginProvider == login.LoginProvider && l.ProviderKey == login.ProviderKey))
                 .ToListAsync();
 
-            return users.First();
+            return users.FirstOrDefault();
         }
 
         /// <summary>
